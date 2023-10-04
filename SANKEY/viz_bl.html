@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	
+	<title>Teradata - Path Analysis</title>
+	
+	<!-- These two libraries are copied from the download builder here: https://datatables.net/download/ -->
+    <link rel="stylesheet" type="text/css" href="css/datatables.min.css"/>
+    <script type="text/javascript" src="js/datatables.min.js"></script>
+
+    <!-- Include the Tableau Extensions library so we can communicate with Tableau -->
+    <script src="lib/tableau-extensions-1.latest.js"></script>
+	
+	<!-- Include our own style sheets and javascript code -->
+    <link rel="stylesheet" href="./Sankey.css">
+    <script src="Sankey.js"></script>
+	
+	
+	<link rel="stylesheet" href="css/main.css">
+	<link rel="stylesheet" href="css/jquery-ui.min.css">
+	<link rel="stylesheet" href="css/select2.css">
+   
+	<!--[if lte IE 8]><script language="javascript" type="text/javascript" src="../excanvas.min.js"></script><![endif]-->
+	<!--<script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>-->
+	
+	<!--
+	<script type="text/javascript" src="js/jquery-1.10.2.min.js"></script>
+	-->
+	
+	<script type="text/javascript" src="js/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="js/jquery.blockUI.js"></script>
+	<script type="text/javascript" src="js/select2.full.js"></script>
+
+	<script type="text/javascript" src="js/moment.min.js"></script>
+	<script type="text/javascript" src="js/tsankey_header_dashboard.o.js"></script>
+	<script type="text/javascript" src="js/pv.o.js"></script>
+	
+	
+	
+	
+	<style type="text/css">
+		input {
+			border: solid 1px #cccccc;
+			background: #ffffff;
+			font-size: 12px;
+			width: 170px;
+			height: 18px;
+			padding: 4px;
+			-moz-border-radius: 4px;
+			-webkit-border-radius: 4px;
+			border-radius: 4px;
+		}
+		
+		.select2class {
+				background: #ffffff;
+				color: #333333;
+		}
+	</style>
+	
+	
+	
+		
+	<script type="text/javascript">
+		//$(document).ready(function() {
+		//	callRunTree();
+		//});
+	</script>
+	
+	
+	
+</head>
+<body style="background: #00233C; margin: 0px; overflow-x: hidden;">
+<!-- <body style="background: #ff0033; margin: 0px; overflow-x: hidden;"> -->
+
+	<style>
+		.loading {
+			-webkit-animation:spin 2s linear infinite;
+			-moz-animation:spin 2s linear infinite;
+			animation:spin 2s linear infinite;
+		}
+		@-moz-keyframes spin { 100% { 
+			-moz-transform:rotate(360deg); 
+			}
+		}
+		@-webkit-keyframes spin { 100% { 
+			-webkit-transform:rotate(360deg); 
+			}
+		}
+		@keyframes spin { 100% {
+			-webkit-transform:rotate(360deg);
+			transform:rotate(360deg);
+			}
+		}
+	</style>
+	
+	<div id="div_display_box" style="position: absolute; width: 168px; height: 140px; display: none; padding-top: 14px; text-align: center; font-size: 12px; font-weight: 700;"><img src="images/spinner2.png" class="loading" style="width: 128px; height: 128px;"><!-- <br><br>Please Wait. --></div>
+	<div id="div_display_box_background" style="position: absolute; width: 220px; display: none; padding-top: 14px; text-align: center; font-size: 12px; font-weight: 700;"><img src="images/spinner2.png" class="loading" style="width: 128px; height: 128px;"><br><br><input type="button" value="RUN IN BACKGROUND" style="width: 160px; height: 20px; font-weight: 500; background: #eeeeee; border: solid 1px #333333; cursor: pointer;" onclick="setBackgroundRun();"><br><br></div>
+
+	<div id="div_sankey_colors_pulldown" style="position: absolute; font-size: 14px; width: 170px; background: #ffffff; display: none; border: solid 1px #e6eeee; color: #333333" onmouseover="sankeyColorsPullDown('ON');" onmouseout="sankeyColorsPullDown('OFF');">
+		<div style="float: left; padding-left: 10px; width: 170px; padding-bottom: 4px; padding-top: 4px; cursor: pointer;" onmouseover="$(this).css({'background' : '#e6eeee'});" onmouseout="$(this).css({'background' : '#ffffff'});" onclick="setSankeyColors('NONE');">
+			No Edge Color
+		</div>
+		<div style="float: left; padding-left: 10px; width: 170px; padding-bottom: 4px; padding-top: 4px; cursor: pointer;" onmouseover="$(this).css({'background' : '#e6eeee'});" onmouseout="$(this).css({'background' : '#ffffff'});" onclick="setSankeyColors('SOURCE');;">
+			Edges Match Source
+		</div>
+		<div style="float: left; padding-left: 10px; width: 170px; padding-bottom: 4px; padding-top: 4px; cursor: pointer;" onmouseover="$(this).css({'background' : '#e6eeee'});" onmouseout="$(this).css({'background' : '#ffffff'});" onclick="setSankeyColors('TARGET');;">
+			Edges Match Target
+		</div>
+	</div>
+
+	
+	<div style="position: fixed; width: 100%; overflow: hidden; z-index: 1001;">
+
+		
+		<div id="div_pop_error" style="float: left; width: 720px; height: 240px; display: none; font-size: 12px; font-weight: 700; overflow: auto; background: #ffffff; border: solid 1px #333333;">
+			<div style="clear: both; height: 6px; width: 1px;"></div>
+			<div style="float: left; width: 700px; text-align: right;">
+				<a href="javascript:$.unblockUI();">[X] CLOSE POP-UP</a>
+			</div>
+			<div style="clear: both; height: 6px; width: 1px;"></div>
+		
+			<div style="float: left; font-size: 18px; font-weight: 700; padding-left: 20px;">
+				Sorry, this query produced zero paths.
+			</div>
+			<div style="clear: both; height: 15px; width: 1px;"></div>
+			<div style="float: left; font-size: 14px; font-weight: 700; padding-left: 20px; color: #333333;">
+				Error Message:
+			</div>
+			<div style="clear: both; height: 10px; width: 1px;"></div>
+			<div style="float: left; padding-left: 20px;">
+				<!-- <textarea id="ta_error_message" style="width: 660px; height: 114px; padding-left: 10px; padding-right: 10px; padding-top: 6px; padding-bottom: 6px; font-size: 14px;" readonly></textarea> -->
+				<div id="div_error_message_container" style="float: left; width: 660px; height: 114px; padding-left: 10px; padding-right: 10px; padding-top: 6px; padding-bottom: 6px; font-size: 14px; overflow: auto; border: solid 1px #333333;">
+					<div id="div_error_message" style="float: left; width: 1000px;"></div>
+				</div>
+			</div>
+
+		</div>
+		
+		<div id="div_pop_zero_paths" style="float: left; width: 420px; height: 140px; display: none; font-size: 12px; font-weight: 700; overflow: auto; background: #ffffff; border: solid 1px #333333;">
+			<div style="clear: both; height: 6px; width: 1px;"></div>
+			<div style="float: left; width: 400px; text-align: right;">
+				<a href="javascript:$.unblockUI();">[X] CLOSE POP-UP</a>
+			</div>
+			<div style="clear: both; height: 40px; width: 1px;"></div>
+		
+			<div style="float: left; font-size: 18px; font-weight: 700; width: 100%; text-align: center;">
+				Sorry, this query produced zero paths.
+			</div>
+
+		</div>
+		
+		<!--
+		<div style="clear: both; height: 1px; width: 100%; background: #eeeeee;">
+			<div style="float: left; height: 1px; width: 81px; background: #333333;"></div>
+		</div>
+		-->
+		
+	</div>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<div id="div_body" style="float: left; background: #00233C; z-index: 100; border: solid 0px #ff00ff; border-left: solid 0px #cccccc; border-right: solid 0px #cccccc; overflow: hidden;">
+	
+		<!--
+		<div style="float: left; height: 65px; width: 100%; background: url('./images/top_bar.png') repeat-x;">
+			<div id="div_top_logo" style="float: left; width: 100%; display: none;">
+				<div style="clear: both; height: 23px; width: 1px;"></div>
+				<div style="float: left; width: 27px; height: 1px;"></div>
+				<div style="float: left; width: 100px;">
+					<img src="./images/teradata_top_bar_logo.png" width="100" height="19">
+				</div>
+				<div style="float: left; width: 16px; height: 1px;"></div>
+				<div style="float: left; width: 100px; color: #ffffff; font-size: 20px; font-weight: 500;">
+					SANKEY
+				</div>
+			</div>
+		</div>
+		<div style="clear: both; height: 0px;"></div>
+		-->
+		<!--
+		<div id="div_test" style="float: left; width: 800px; height: 800px; overflow: auto; border: solid 1px #ff00ff;"></div>
+		<div style="clear: both; height: 0px;"></div>
+		-->
+		
+		
+		
+		
+		
+		<!-- Choose Visualization Dialog (See https://www.w3schools.com/bootstrap/bootstrap_modal.asp for bootstrap dialog info) -->
+		<div id="choose_visualization_dialog" class="modal fade" role="dialog">
+		  <div class="modal-dialog">
+			<div class="modal-content">
+			  <div class="modal-header">
+				<div style="float: left; width: 100%; text-align: center;">
+					<img src="./images/teradata_tableau_extensions.png" style="width: 200px;"></div>
+				<div style="clear: both; width: 1px; height: 10px;"></div>
+				<!-- <button type="button" class="close" data-dismiss="modal">&times;</button> -->
+				<h4 class="modal-title">Path Analysis</h4>
+			  </div>
+			  <div class="modal-body" style="text-align: center; height: 140px;">
+				<div style="float: left; width: 100%; text-align: center;">
+					Select a Visualization:
+				</div>
+				<div style="clear: both; width: 1px; height: 10px;"></div>
+				<div style="float: left; width: 100%">
+					<select class="select_normal" size="1" name="s_visualizations" id="s_visualizations" style="width: 300px; border: solid 1px #cccccc;">
+						<option value="SANKEY">Sankey</option>
+					</select>
+				</div>
+				<div style="clear: both; width: 1px; height: 8px;"></div>
+				<div style="float: left; width: 100%;">
+					<input id="b_visualization" type="button" style="width: 300px; height: 26px; background: #cccccc; cursor: pointer;" value="NEXT&nbsp;&nbsp;&gt;&gt;">
+				</div>
+				<!-- <div id="choose_datasource_buttons"></div> -->
+			  </div>
+			</div>
+		  </div>
+		</div>
+		
+		<!-- Choose DataSource Dialog (See https://www.w3schools.com/bootstrap/bootstrap_modal.asp for bootstrap dialog info) -->
+		<div id="choose_datasource_dialog" class="modal fade" role="dialog">
+		  <div class="modal-dialog">
+			<div class="modal-content">
+			  <div class="modal-header">
+				<div style="float: left; width: 100%; text-align: center;">
+					<img src="./images/teradata_tableau_extensions.png" style="width: 200px;"></div>
+				<div style="clear: both; width: 1px; height: 10px;"></div>
+				<!-- <button type="button" class="close" data-dismiss="modal">&times;</button> -->
+				<h4 class="modal-title">Path Analysis</h4>
+			  </div>
+			  <div class="modal-body" style="text-align: center; height: 140px;">
+				<div style="float: left; width: 100%; text-align: center;">
+					Select a DataSource:
+				</div>
+				<div style="clear: both; width: 1px; height: 10px;"></div>
+				<div style="float: left; width: 100%">
+					<select class="select_normal" size="1" name="s_data_sources" id="s_data_sources" style="width: 300px; border: solid 1px #cccccc;"></select>
+				</div>
+				<div style="clear: both; width: 1px; height: 8px;"></div>
+				<div style="margin: auto; width: 300px; border: solid 0px #ff0000;">
+					<div style="float: left; width: 145px;">
+						<input id="b_datasource_back" type="button" style="width: 145px; height: 26px; background: #cccccc; cursor: pointer;" value="&lt;&lt;&nbsp;&nbsp;BACK">
+					</div>
+					<div style="float: left; width: 10px; height: 1px;"></div>
+					<div style="float: left; width: 145px;">
+						<input id="b_datasource" type="button" style="width: 145px; height: 26px; background: #cccccc; cursor: pointer;" value="NEXT&nbsp;&nbsp;&gt;&gt;">
+					</div>
+				</div>
+				<!-- <div id="choose_datasource_buttons"></div> -->
+			  </div>
+			</div>
+		  </div>
+		</div>
+		
+		
+		<!-- Choose WorkSheet Dialog (See https://www.w3schools.com/bootstrap/bootstrap_modal.asp for bootstrap dialog info) -->
+		<div id="choose_worksheet_dialog" class="modal fade" role="dialog">
+		  <div class="modal-dialog">
+			<div class="modal-content">
+			  <div class="modal-header">
+				<div style="float: left; width: 100%; text-align: center;">
+					<img src="./images/teradata_tableau_extensions.png" style="width: 200px;"></div>
+				<div style="clear: both; width: 1px; height: 10px;"></div>
+				<!-- <button type="button" class="close" data-dismiss="modal">&times;</button> -->
+				<h4 class="modal-title">Sankey</h4>
+			  </div>
+			  <div class="modal-body" style="text-align: center; height: 140px;">
+				<div style="float: left; width: 100%; text-align: center;">
+					Select a WorkSheet:
+				</div>
+				<div style="clear: both; width: 1px; height: 10px;"></div>
+				<div style="float: left; width: 100%">
+					<select class="select_normal" size="1" name="s_work_sheets" id="s_work_sheets" style="width: 300px; border: solid 1px #cccccc;"></select>
+				</div>
+				<div style="clear: both; width: 1px; height: 8px;"></div>
+				<div style="margin: auto; width: 300px; border: solid 0px #ff0000;">
+					<div style="float: left; width: 145px;">
+						<input id="b_worksheet_back" type="button" style="width: 145px; height: 26px; background: #cccccc; cursor: pointer;" value="&lt;&lt;&nbsp;&nbsp;BACK">
+					</div>
+					<div style="float: left; width: 10px; height: 1px;"></div>
+					<div style="float: left; width: 145px;">
+						<input id="b_worksheet" type="button" style="width: 145px; height: 26px; background: #cccccc; cursor: pointer;" value="NEXT&nbsp;&nbsp;&gt;&gt;">
+					</div>
+				</div>
+				<!-- <div id="choose_datasource_buttons"></div> -->
+			  </div>
+			</div>
+		  </div>
+		</div>
+		
+		
+		
+		<!-- Choose Fields Dialog (See https://www.w3schools.com/bootstrap/bootstrap_modal.asp for bootstrap dialog info) -->
+		<div id="choose_fields_dialog" class="modal fade" role="dialog">
+		  <div class="modal-dialog">
+			<div class="modal-content">
+			  <div class="modal-header">
+				<div style="float: left; width: 100%; text-align: center;">
+					<img src="./images/teradata_tableau_extensions.png" style="width: 200px;"></div>
+				<div style="clear: both; width: 1px; height: 10px;"></div>
+				<!-- <button type="button" class="close" data-dismiss="modal">&times;</button> -->
+				<h4 class="modal-title">Sankey</h4>
+			  </div>
+			  <div class="modal-body" style="text-align: center; height: 190px;">
+			  
+				<div style="float: left; width: 100%; text-align: center;">
+					Select Data Fields:
+				</div>
+				<div style="clear: both; width: 1px; height: 10px;"></div>
+				<div style="float: left; width: 100%; border: solid 0px #ff0000;">
+					<div style="margin: auto; width: 300px; border: solid 0px #ff0000;">
+						<div style="float: left; width: 100px; text-align: left; padding-top: 4px;">
+							Path Field
+						</div>
+						<div style="float: left; width: 200px; text-align: left;">
+							<select class="select_normal" size="1" name="s_path_fields" id="s_path_fields" style="width: 200px; border: solid 1px #cccccc;"></select>
+						</div>
+					</div>
+				</div>
+				<div style="clear: both; width: 1px; height: 8px;"></div>
+				<div style="float: left; width: 100%">
+					<div style="margin: auto; width: 300px; border: solid 0px #ff0000;">
+						<div style="float: left; width: 100px; text-align: left; padding-top: 4px;">
+							Count Field
+						</div>
+						<div style="float: left; width: 200px; text-align: left;">
+							<select class="select_normal" size="1" name="s_count_fields" id="s_count_fields" style="width: 200px; border: solid 1px #cccccc;"></select>
+						</div>
+					</div>
+				</div>
+				<div style="clear: both; width: 1px; height: 8px;"></div>
+				<div style="margin: auto; width: 300px; border: solid 0px #ff0000;">
+					<div style="float: left; width: 145px;">
+						<input id="b_fields_back" type="button" style="width: 145px; height: 26px; background: #cccccc; cursor: pointer;" value="&lt;&lt;&nbsp;&nbsp;BACK">
+					</div>
+					<div style="float: left; width: 10px; height: 1px;"></div>
+					<div style="float: left; width: 145px;">
+						<input id="b_fields" type="button" style="width: 145px; height: 26px; background: #cccccc; cursor: pointer;" value="NEXT&nbsp;&nbsp;&gt;&gt;">
+					</div>
+				</div>
+				<!-- <div id="choose_datasource_buttons"></div> -->
+			  </div>
+			</div>
+		  </div>
+		</div>
+		
+		
+		
+		
+
+		<div style="float: left; background: #00233C;">
+			 <div id="div_content_container" style="position: absolute; margin: 0px; overflow: hidden; border: solid 0px #ffff00; background: #00233C;"> 
+								<div id="div_content" style="float: left; width: 100%; background: #00233C; border: solid 0px #ff00ff; padding: 0px; display: none; overflow: hidden;">
+				
+							
+							
+					<style>
+						/*@import url('https://fonts.googleapis.com/css?family=Roboto');*/
+					</style>
+					<style type="text/css">
+			  
+						body {
+								font-family: Helvetica, Arial, Sans-Serif;
+								/*RobotoDraft, Roboto, "Helvetica Neue", sans-serif;*/
+								font-size: 12px;
+						}
+
+						
+						#div_tree_container .node {
+							cursor: pointer;
+						}
+							
+			   
+						#div_tree_container .node circle {
+							fill: #fff;
+							/*stroke: steelblue;*/
+							stroke: #00796B;
+							stroke-width: 1.5px;
+						}
+			   
+						#div_tree_container .node text {
+							font-size:11px;
+							font-weight: 500;
+							font-family:sans-serif;
+							cursor: default;
+						}
+			   
+						#div_tree_container .link {
+							fill: none;
+							/*stroke: #ccc;
+							stroke-width: 1.5px;*/
+							stroke: #cccccc;
+							stroke-width: 10px;
+							cursor: pointer;
+						}
+						
+						#div_tree_container .link text, rect {
+							/*visibility: hidden;*/
+							fill: #ffffff;
+							font-size: 15px;
+							font-weight: 700;
+							font-family:sans-serif;
+							stroke: #ffffff;
+							stroke-width: 0px;
+							cursor: default;
+							//border: solid 1px #ff0000;
+							//background: #ff0000;
+						}
+						
+						#div_tree_container .linktext {
+							color: #ff0000;
+							border: solid 1px #333333;
+							font-size: 80px;
+							font-weight: 500;
+							font-family:sans-serif;
+							cursor: default;
+						}
+			   
+						
+						#div_tree_container .link:hover {
+							stroke: #999999;
+						}
+
+					</style>
+					<script type="text/javascript" src="js/d3.min.js"></script> 
+					<script type="text/javascript" src="js/sankey.js"></script>
+					<link rel="stylesheet" type="text/css" href="css/sunburst.css"/>
+					<script src="js/tsankeytree.o.js"></script>
+					<script src="js/dashboard.o.js"></script>
+					<script type="text/javascript">
+						var i_auto = 0;
+					</script>
+
+
+					<style>
+						div.tooltip2 {
+							visibility: hidden;
+							font-size:10;
+							background: #00B2B1;
+							border:solid 0px #333333;
+							padding: 3px;
+							color: #ffffff;
+							font-weight: 500;
+							position: absolute;
+							pointer-events: none;
+							z-index: 1000;
+						}
+					</style>
+					<div class="tooltip2"></div>
+					
+					<style>
+						div.tooltip_compare {
+							visibility: hidden;
+							border: solid 1px #333333;
+							color: #ffffff;
+							font-weight: 700;
+							position: absolute;
+							pointer-events: none;
+							z-index: 1000;
+						}
+					</style>
+					<div id="div_tooltip_compare" class="tooltip_compare">
+						<!--
+						<div id="div_tooltip_compare_a" style="float: left; padding-top: 4px; padding-bottom: 4px; width: 100%; background: #D4E6F1; text-align: center; color: #333333; white-space: nowrap;"></div>
+						<div style="clear: both; height: 0px; width: 1px;"></div>
+						<div id="div_tooltip_compare_b" style="float: left; padding-top: 4px; padding-bottom: 4px; width: 100%; background: #333333; text-align: center; color: #eeeeee; white-space: nowrap;"></div>
+						-->
+					</div>
+					
+
+
+					 <div style="float: left; height: 1px; width: 62px;"></div>
+					 <div id="div_test" style="clear: both; height: 214px; padding-left: 100px; width: 600px; display: none; overflow: auto;"></div>
+					 <div id="div_store_tree" style="display: none;"></div>
+					 <div id="div_store_flow" style="display: none;"></div>
+					 <div id="div_results_container" style="float: left; border: solid 0px #ff0000; overflow: hidden;">
+					 
+						 <div id="div_paths" style="float: left; display: none; overflow: hidden;">
+						 
+							<div style="float: left; border: solid 0px #ff00ff; width: 100%;">
+
+								<div style="clear: both; height: 20px; width: 1px;"></div>
+								
+								<div style="float: left; width: 20px; height: 1px;"></div>
+								<div id="div_paths_content" style="float: left; width: 1220px; overflow: hidden; border: solid 0px #cccccc;">
+									
+									<div style="float: left; padding-top: 10px; padding-bottom: 10px; padding-left: 20px; font-size: 16px; font-weight: 600;">Tree Diagram</div>
+									<div id="div_paths_controls" style="float: right; padding-top: 12px; border: solid 0px #ff0000;">
+										<div style="float: left; height: 20px;">
+											<div id="div_btn_expand_all" style="float: left; width: 220px; cursor: pointer; display: none;">
+												<input type="button" value="EXPAND ALL" onclick="expandAll();" style="width: 200px; border: solid 1px #333333; background: #eeeeee;">
+											</div>
+											<div id="div_btn_collapse_all" style="float: left; width: 220px; cursor: pointer; display: none;">
+												<input type="button" value="COLLAPSE ALL" onclick="collapseAll();" style="width: 200px; border: solid 1px #333333; background: #eeeeee;">
+											</div>
+											<div id="div_expand_all" style="float: left; cursor: pointer; display: inline;">
+												<div style="float: left; width: 24px;">
+													<img src="data:image/gif;base64,R0lGODlhWgA6AOZ/AKenp+rq6r6+viEhIeHh4RwcHN7e3tbW1hUVFampqczMzMrKyjg4OMbGxsTExMLCwry8vEBAQIGBgbW1tZKSkiwsLA4ODrCwsK6urlVVVaurq4SEhKOjo5iYmFlZWYKCgre3tzIyMk5OTqysrHl5eQUFBRAQEFJSUnJycnBwcJ+fnykpKWpqao6OjhgYGCYmJl9fXyQkJG5ubj4+PmhoaEZGRjAwMDc3NxsbGwkJCTw8PEREREJCQgICAtXV1d3d3YaGhjU1NWBgYPb29uzs7Nzc3O/v73d3d0hISNnZ2dHR0Xp6epeXl/z8/PDw8Ofn5/r6+k1NTTQ0NOXl5X19faWlpfHx8djY2OTk5MnJyfT09Li4uNLS0tvb23t7e5ycnP39/Xx8fM7OzpCQkLm5ubu7u8DAwNPT0+3t7fn5+ff395GRke7u7nV1debm5vX19dDQ0MjIyJ2dnWRkZKSkpLq6un5+frOzs4iIiEtLS5qams/Pz2dnZ9TU1AAAAP///yH5BAEAAH8ALAAAAABaADoAAAf/gH+Cg4SFhoeIiYqLhHtLERuMkpOUlZMKUT1+fkKWnp+giEMompucoaiplAE6pqadqrGyhAcxrqYys7qqSQW3KxQ+b7vEn2UurhYtQ8XNlkwlrjhiztWSXCK3FQbW3YVEZHIAUdGuIQHe6VBVSCbIt341TqFpZwnpkgIhpu+mJSRNQIG5cKKACXyLwpTa1G8Tj4Cf6kgxZQGhqAzwGm4K8cPSGz63DlosBAUJvB4v4PkZcIaSgX23eowklCabKwR2lLDhAiTlzQaSfAwI6YHJTEFWTLryMKWQljYL/ZhwsEgAAlc9JKA7+qcPTFNeEm25airHiEQdcrgaIICroC8W/261WJTEpykWRApdsWlqxpOZShI0+DLxFgVJWOxuwkElS5EJMNS6ysDMopE1OlwMhWd00pOvrlaoRDGTCQ5Tp5PRsWQkAjxb0lSMJHLilq+yDz4NkVBuE2xTY0YSsAHv9qYeDJKAihOh1O9N/xAWeW6KrCsXSkIJOBKBgcoMarwRqRATCQUKNaL6wZ4qDZwj1jdFyFuNyI1bERQQylLjFg4usTwBgzZFOOPGfa6QgMgGUbmgXyxVxMXPBMU0sJkpQCiCgWSbWEBhLGKkdtdfslixAYebSMAIBBIelwIBsRxwYYcedGBAET/kqGOOB+C4o45d+CAGGUvMuEkbk0CAov9UGWigShfkxTRAD1RWSWU0PZRg5ZXq3XJEJRj0ZsoNk1xRhRmIGOFBSMSp5Oab/qhoSR3x+REBI1BoEAUCuSQCwIUm7ADnoCotAUoSrplypyIX2AVLIk6MEUIJJfBF6KUI3APKGLcxkIgWc9zyqCJTJIDHmpemuslqoDjBAQ2GHhJAYa6MysgUPuSqq65bwLHrrgsAoAcVM5wEQDEEKGbKHBY5IKgrJXw4ixvKuhBGFkbMtMEtFgAlSxfKspCtWxe06IcFbakSR0MlcOAWIVugmMNcoTSxgZg5gPBuIReI6YcOAGBhCRscROkPGfsa0oFKFtgQxMMQRxyxFAP4e26KGQkfsoaqblrsYMaIyGGxqv6GgAbIiTygLMkhyYYyIlZ8oNGlXfrxwcuJoHEBCmEA4fPPQAcNgwjmbkIazrNggYK/VCCtSwPKhuW0LE4kehcYU8cyhKV+3PBg1qhA0R+0eXxxBdihaGF1rWiHokYU8NjadiVNeCHq3KiY8ZXceFcCxh0evPAlJYEAADs=" width="20" onclick="expandAll();">
+												</div>
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #333333;" onclick="expandAll();" onmouseover="this.style.color='#cccccc';" onmouseout="this.style.color='#333333';">
+													Expand All Paths
+												</div>
+											</div>
+											<div style="float: left; width: 20px; height: 1px;"></div>
+											<div id="div_dominant_path" style="float: left; cursor: pointer; display: inline;">
+												<div style="float: left; width: 24px;">
+													<img src="data:image/gif;base64,R0lGODlhWgA6AOZ/AKenp+rq6r6+viEhIeHh4RwcHN7e3tbW1hUVFampqczMzMrKyjg4OMbGxsTExMLCwry8vEBAQIGBgbW1tZKSkiwsLA4ODrCwsK6urlVVVaurq4SEhKOjo5iYmFlZWYKCgre3tzIyMk5OTqysrHl5eQUFBRAQEFJSUnJycnBwcJ+fnykpKWpqao6OjhgYGCYmJl9fXyQkJG5ubj4+PmhoaEZGRjAwMDc3NxsbGwkJCTw8PEREREJCQgICAtXV1d3d3YaGhjU1NWBgYPb29uzs7Nzc3O/v73d3d0hISNnZ2dHR0Xp6epeXl/z8/PDw8Ofn5/r6+k1NTTQ0NOXl5X19faWlpfHx8djY2OTk5MnJyfT09Li4uNLS0tvb23t7e5ycnP39/Xx8fM7OzpCQkLm5ubu7u8DAwNPT0+3t7fn5+ff395GRke7u7nV1debm5vX19dDQ0MjIyJ2dnWRkZKSkpLq6un5+frOzs4iIiEtLS5qams/Pz2dnZ9TU1AAAAP///yH5BAEAAH8ALAAAAABaADoAAAf/gH+Cg4SFhoeIiYqLhHtLERuMkpOUlZMKUT1+fkKWnp+giEMompucoaiplAE6pqadqrGyhAcxrqYys7qqSQW3KxQ+b7vEn2UurhYtQ8XNlkwlrjhiztWSXCK3FQbW3YVEZHIAUdGuIQHe6VBVSCbIt341TqFpZwnpkgIhpu+mJSRNQIG5cKKACXyLwpTa1G8Tj4Cf6kgxZQGhqAzwGm4K8cPSGz63DlosBAUJvB4v4PkZcIaSgX23eowklCabKwR2lLDhAiTlzQaSfAwI6YHJTEFWTLryMKWQljYL/ZhwsEgAAlc9JKA7+qcPTFNeEm25airHiEQdcrgaIICroC8W/261WJTEpykWRApdsWlqxpOZShI0+DLxFgVJWOxuwkElS5EJMNS6ysDMopE1OlwMhWd00pOvrlaoRDGTCQ5Tp5PRsWQkAjxb0lSMJHLilq+yDz4NkVBuE2xTY0YSsAHv9qYeDJKAihOh1O9N/xAWeW6KrCsXSkIJOBKBgcoMarwRqRATCQUKNaL6wZ4qDZwj1jdFyFuNyI1bERQQylLjFg4usTwBgzZFOOPGfa6QgMgGUbmgXyxVxMXPBMU0sJkpQCiCgWSbWEBhLGKkdtdfslixAYebSMAIBBIelwIBsRxwYYcedGBAET/kqGOOB+C4o45d+CAGGUvMuEkbk0CAov9UGWigShfkxTRAD1RWSWU0PZRg5ZXq3XJEJRj0ZsoNk1xRhRmIGOFBSMSp5Oab/qhoSR3x+REBI1BoEAUCuSQCwIUm7ADnoCotAUoSrplypyIX2AVLIk6MEUIJJfBF6KUI3APKGLcxkIgWc9zyqCJTJIDHmpemuslqoDjBAQ2GHhJAYa6MysgUPuSqq65bwLHrrgsAoAcVM5wEQDEEKGbKHBY5IKgrJXw4ixvKuhBGFkbMtMEtFgAlSxfKspCtWxe06IcFbakSR0MlcOAWIVugmMNcoTSxgZg5gPBuIReI6YcOAGBhCRscROkPGfsa0oFKFtgQxMMQRxyxFAP4e26KGQkfsoaqblrsYMaIyGGxqv6GgAbIiTygLMkhyYYyIlZ8oNGlXfrxwcuJoHEBCmEA4fPPQAcNgwjmbkIazrNggYK/VCCtSwPKhuW0LE4kehcYU8cyhKV+3PBg1qhA0R+0eXxxBdihaGF1rWiHokYU8NjadiVNeCHq3KiY8ZXceFcCxh0evPAlJYEAADs=" width="20" onclick="collapseAll(); expandDominant();">
+												</div>
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #333333;" onclick="collapseAll(); expandDominant();" onmouseover="this.style.color='#cccccc';" onmouseout="this.style.color='#333333';">
+													Dominant Path
+												</div>
+											</div>
+											<div style="float: left; width: 20px; height: 1px;"></div>
+											<div id="div_collapse_all" style="float: left; cursor: pointer; display: inline;">
+												<div style="float: left; width: 24px;">
+													<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALIAAACyCAYAAADmipVoAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMDY3IDc5LjE1Nzc0NywgMjAxNS8wMy8zMC0yMzo0MDo0MiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTUgKFdpbmRvd3MpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjczQkRDQUU2MjE1RjExRTY4QzI5OTI0RTdBRTg4MUYxIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjczQkRDQUU3MjE1RjExRTY4QzI5OTI0RTdBRTg4MUYxIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NzNCRENBRTQyMTVGMTFFNjhDMjk5MjRFN0FFODgxRjEiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NzNCRENBRTUyMTVGMTFFNjhDMjk5MjRFN0FFODgxRjEiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7xIWdYAAAC00lEQVR42uzSMVbEQAxEwdX9Dw0ZCQTwsL3qnvqBU0ujmpf+0sfD/xtP7qHS0LqZR6mG64YeoRKum1q6Fu/x9x14obYcwG5uKYDd3jIAM1C3BMAsRA8PMBPRQwPMRvSwADMSDxliTqIHBJiXeMgQMxM9FMBAx0OGGOZ4yBDDHD0EwEDHQ4YY5njIEMMcDxlimOMhQwxzPGSIYY6HDDHM8ZAhhjkeMsS63dpArAbMA7EaMA/EasA8EKsB80CsBswgC2SItcXgQKwGzAOxGjCDLJAh1hbMA7EaMIOsoyFDrFWYB2I1YAZZR0KGWCsxg6zjIEOstZhB1lGQIdZqzCDrGMgQaz1mkHUEZIgVgRlk1UOGWDGYQVY1ZIgVhRlkgSxthgyx4jCDLJClrZAhViRmkAWyBLJ0E2SIFYsZZIEsgSzdABliRWMGWSBLIEsgS98hQ6x8ySALZAlkCWQJZIEsgSyBLIEskCWQJZAlkAWyBLIEsgSyQJZAlkCWQJZAFsgSyBLIEsgCWdoP+QWz0h2DLJAlkCWQpZ8hw6xYxF8fkAWyBLJ0PWSYFYkYZIEsgSzdDBlmxSEGWSBL2yHDrCjEIAtkKQEyzIpBDLKOgAyzIhCDrGMgw6z1iEHWUZBh1mrEIOs4yDBrLWKQdSRkmLUSMcg6FjLMWocYZB0NGWatQvwfyDBrDWKQBTLM2oL4Csgw6+2IQRbIMGsL4ishw6y3GpyLh4JZb/EHskCGWVvszU1DwqxH3c2Nw8Ksx8zNzUPDrEe8zQPDw6zbrc1DS8AM8asBMswQ10CGGeIayDBDXAMZZohrIMMMcQ1kmCGugQwzxDWQgQa4CjLMENdAhhniGshAA1wFGWZeaiADzUkVZJgZqYEMNBtVkIFmogoy0CxUQQaagSrIQB98+yk+FNAH3XwOOBzQB9x6DjvmB7wWhdpNLQ22G3oEsN3Mo0Tjdp9f9inAALwSspcb2lIcAAAAAElFTkSuQmCC" height="13" onclick="collapseAll();">
+												</div>
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #333333;" onclick="collapseAll();" onmouseover="this.style.color='#cccccc';" onmouseout="this.style.color='#333333';">
+													Collapse All Paths
+												</div>
+											</div>
+											
+											<div style="float: left; width: 20px; height: 1px;"></div>
+											<div id="div_collapse_all" style="float: left; cursor: pointer; display: inline;">
+												<div style="float: left; width: 24px;">
+													<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALIAAACyCAYAAADmipVoAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMDY3IDc5LjE1Nzc0NywgMjAxNS8wMy8zMC0yMzo0MDo0MiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6OURCODQ4QTUyREUwMTFFOEE5OUE5OUM4REI0MkUwMEQiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6OURCODQ4QTQyREUwMTFFOEE5OUE5OUM4REI0MkUwMEQiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTUgKFdpbmRvd3MpIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NzNCRENBRTYyMTVGMTFFNjhDMjk5MjRFN0FFODgxRjEiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NzNCRENBRTcyMTVGMTFFNjhDMjk5MjRFN0FFODgxRjEiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz5l7zrsAAAE4ElEQVR42uzcXY4TMRBF4djqHc3+11aIR9AIJh3/VLm/84xIXD6+XCdN2tfX1ws/Jha/XjPyn3EZQRppf/oeyE3k9OLeeZ/EfrjIceg6GpHJe9oaG5HJS2oiEzjxPBqRCUxoIhOY0EQmMKGPFTmLwO3Ge2oJ11Na6IvAt6Vd8XcHoc8TOQ4T987rB6FrixwPETej2FFB5ovApS85bdGs0qfz9VCJT/xSYIXUadP5IvCRtImzTJnO/SESt9cznwqbue4g8rrBPFXgVXNII/N1sMBYUzlSVI1+mMQSeN+c4qkiB4GPEzqeJnIQ+Fih4ykij5QYOe8WcbrIMWjYJM6fznGqyKMkRp10jtNEjgFDJXHNdI5TRI4EyYC9exDVRSYxmZfI3JNKrEqcWTWimsix8eQjdzpHFZFJTOblMncS4wSZ+wEDgb0bKnKQmMy7UrmTGCfI3EmME2TuxRYMnXmKyH5AELvvWB+LrFIgTcXoRRYIFWOKyEFiTNrzWCWyXox0fbknPplQMaaJrFIgZcXoZowT6LNOiDTGylTuyd44yDw1kX1SgV3ESJGlMVK70UedCGBnKvcqJw5S+RORpTFKpHLPftIglT9NZGmMMqncs54wSOURiSyNUSqVe7aTBak8uiMDZegDaoU0xupUDomMxySyNEa5rtw/rBXALkK1gGqhViBjvZDIOC6R9WOU7cl3E1mtQKp6oVrg8Zc9IJ3I+jFK9+Q7iawfI11PVi2gIwNEBgaL/M5FTz9Gxp4cEhmqBUBkgMjAfZFd9JD2wieRoVoARAYGcr3xZz0hNw6zlMgAkUFkgMgAkQEig8gAkQEiA+/xzjd7nn77P2GWe2YqkaFaAEQGNonsiS1kvXNIZKgWAJEBIgPfiPzWb2wZGbJd9H47LJGhWgBEBjaLrCcjUz/+Q2RPY6EqTbWAjgycILKejDT9+G+R9WSU7MeqBXRk9QJZaoVExrGJrCejXD8ekcjqBbbXCtUCR1/22sqTBNxwqElkPCaRdWWU6cb/E9mnF8hKm33Zk8rY5kx/13wgWxrPuOxJZWxxpd89AUCWNJ6RyFIZWxzpn54EYHcaz0pkqYzlbvRRJwLYlcYzE1kqY6kTffTJIDMGutBmiAykpc86IVIZq9J4ZSKTmcSpEvluKgNTHeurXkgqS+OZQdkLLAwqxVSRG5kxeI/bDpH1ZWztxTurhVSWxumqhYqB7ZVidCKTGdskHl0tyEzibXesXnwQsHdTRG5kJvHqNJ6VyGQm8VKJZ1YLMpN4mcSzO/KnMhM6p8DpJF5x2WsbTz5yXeqmfgu84lMLMpN4+qMMqz5+GyEzoetViSUSrxR51ILIXCeFl0m8WuSRMhM6dwovlXiHyCMXSOacKbxc4l0ij5aZ0LnmuOUZ9Z3PWrSkG0HgYhLvFnnGwgm9b05b/7fQlWCobULnjQzDPbgDpxE4SyLPHoiEnjuHNEGR7bffWrGNfKrA6f61uxIOf0bVeFrliAX78yLyzwcWCza6kbe2xNlFnp3OJ0gdi/fhReS86fwvMdpDxX1VO9xVRF6VztnEjgTzfhH5HKH/JdZpz46UvDNUFDmD0J8KGInn+SLys4WuPr8XkQlNYCITmsBEJvTDBX6CyN9tYJCXyKQmL5ELbHgQl8jEJi6RCwkTpM3JLwEGANr39UEGQ8VfAAAAAElFTkSuQmCC" height="13" onclick="resetZoomPan();">
+												</div>
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #333333;" onclick="resetZoomPan();" onmouseover="this.style.color='#cccccc';" onmouseout="this.style.color='#333333';">
+													Reset Zoom/Pan
+												</div>
+											</div>
+											
+											<!-- <div style="float: left; width: 20px; height: 1px;"></div> -->
+											
+										</div>
+										<div style="float: left;">
+
+											<div id="div_btn_reset_target_paths" style="float: left; display: none;">
+												<div style="float: left; width: 20px; height: 1px;"></div>
+												<div style="float: left; width: 30px; cursor: pointer;">
+													<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFoAAAA8CAYAAADmBa1FAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAFCdJREFUeNrsnAuYjeXexp8ZkUOGiWk6ECmnGhGKkGGMUSLH0ZaSM22Hb2qo7J12Zbejthn61MWFmiKXTsNg5NQyMjmUnA0ZRJgwGJLkNLPv33ut1/XOO2vGtL/B4vqe61rWmrXe9b7ruZ/7uf/3//88r4CcnBzz/+3ytxuK8mRvvPGGueeee0y1atVM9erVTYUKFUxWVpb54YcfTOXKlU3NmjXN+fPn8/6IG24w+/fvN1OmTDHHjh0zpUqVuuS1AgMDzcmTJ63X999/fxs96uu6b/H3jTfeaL755htz8OBBs3z5cjNixAgzcuRIs2DBArNw4UKzbt06c+jQIZOdnW3Kli1r7r77btOiRQsza9YsExQUZEqXLm0qVqxoOnbsWGTYBBYl0D///LPZuXOn2b17t0lPTzdHjx41wcHBpkGDBmbfvn3mxx9/tEB1N8CvVKmS6d+/v7n55pvN6dOnL3ktQCpfvnyQBvP59evXz/jtt9/+pbeL+SujixToX3755YqAjdzxCAgIiMzMzBz51VdfVeSaRd0fv5WOI0eO5PsZMgLYyAjNl4w4wZ46dar5/ffffZ6rWLFiZTW9oyU3scnJySEZGRm8B/DZfK7n6xvoX3/9tcDP/wzYAwcONPHx8XnOAYjS1SfF5CnffvutpbXMEHQVltuzpWTJktcv0IXR1sKAfeHCBXPbbbdZOkzQcwXBdrt27RoqubCCHa148eLWsWL1BQBnJvAZLL8ugT537lyhjrsU2ICLW3FKgJhaqly5coME4BgxuYQNst1CQkL4XgnFiLOff/65FQsefPBBoyB5/QH934INI7GEArukAP2DcyxdutRmqR38IhVc/8fj8ZTYs2dPnuAIw5s2bbpw0aJFrTUIjR5++OGVYr5l3WD5dQU0gAFSYcAGHMB+6KGHTGpqank5jR6ya38RuOE7duzIRu85j4DX2+V7yLHECsQq+G13Q2qmTZsGoC1XrVq1ODY29g4F5phGjRqFyF9P5zuXih/XFNAlSpS4yOrCgH3TTTeFKUEYpOcdSUlJE5j+YWFhNVeuXLntxIkT6HSgAGp34MCBOCUgeeTCOWjEh7Fjx5KsRLz++uvZZcqU+erRRx/drESpRWJiYl+dt7qkKP26AJosy87WLgW2XMHtoaGhY1avXv34J598sp1s7a677jLR0dGB27Zts9hOlimgJ0hzi8tlXHKG0M6cOUPmFyigzYoVK+r07NmzDt5e12hw9uzZpyRFadc80DCSdimwxayKmu4vz5s3L3z69OlM/Vp2Ki4driF93UoqLLnIlh5vEeObXwpodzt16pT1/PHHH5sqVar0GT16tBk2bJhHYEcoaKZd00DfeuutF1/nB7YYdX+pUqXGKXOMxAejr3Yjc+zSpcskBcnZAJuQkGD27t0bfscdd8zR9zp4sz+ftRJ88+23326k73k+1znMpEmTjAYttFu3bh5dM0Jvp12zQIs5uf72BbbYPERJRiSJBtPc2RT0OO4WUnkYvWXLFktCBExHwNYhPsHGmbz00kuW1Lz77rtZkpFgSZJlD53VSQpKR48eDY2KivKI1RE6b9o1CTRWyt28YAfKTdTV42+HDx9uT/3DLTkkKHXr1oWd6/744w8LoPvuu8/y09g8Tfl8webY5s2bYxE785A2V23dunWzd955x/qc89nt+++/J6EJ1eceuaQInTvtmgOaYOYrSKlj5QTUKwKts68Eom3btqcUSBNHjBgxUzbvBO4CjX3xxRetEqedHRYENt9p2LDhbL3coQFKF5BfS+8PZWRkdNmwYUMue7d161ZmSWinTp08ckoR8u9p1xTQNWrU8KWfVcXiEdLHyOPHj+f6rGrVqqZv374kGjP1+QAAlX6XoHrHAOFiGBhkxG4Fga3PiukcW+WfzU8//dRKgIcpm1xZv379cQRFat122759u5k/f37oc88959H5L7tmF2lZEQkAbJiNjChZqKW/J2vq/lW+OMh57J133mlGjRplXn755YWa7v9LIWn27NlM7bNYM8AmyDmDpQvsJDTZrk1zLFpN0Z+ybFxc3Flp/AYFyLh77703Fg3nnM62efNmI9cTqt+IZle7nLWRIgUaPQVsABDYAerw0I0bN7aCPQLH6aHN8OHDTymhGK+g2FUBcPMtt9xifW/t2rWGqU4QhNH5LbUBtgYnqVatWtZgUCuxtZ1Gaq/Pswmw0uK46tWrx2pQjRie6zzKJKkShgroKciV83f6LdCABNgENnnhZGnkX9WRYk57R01jwoQJZujQoR6BOU4sOgXwgIo9A2wCFkWhV199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" width="20" onclick="resetTargetPaths();">
+												</div>
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #333333; cursor: pointer;" onclick="resetTargetPaths();" onmouseover="this.style.color='#cccccc';" onmouseout="this.style.color='#333333';">
+													Reset Paths
+												</div>
+											</div>
+											<div id="div_btn_view_target_paths" style="float: left; cursor: pointer; display: none;">
+												<input type="button" value="VIEW TARGET PATHS" onclick="viewTargetPaths();" style="width: 200px; border: solid 1px #333333; background: #eeeeee; cursor: pointer;">
+											</div>
+											
+											
+											
+											<div style="float: left; width: 0px; height: 1px;"></div>
+											<div id="div_btn_cancel_target_paths" style="float: left; cursor: pointer; display: none;">
+												<div style="float: left; width: 20px; height: 1px;"></div>
+												<div style="float: left; width: 30px;">
+													<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFoAAAA8CAYAAADmBa1FAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAFCdJREFUeNrsnAuYjeXexp8ZkUOGiWk6ECmnGhGKkGGMUSLH0ZaSM22Hb2qo7J12Zbejthn61MWFmiKXTsNg5NQyMjmUnA0ZRJgwGJLkNLPv33ut1/XOO2vGtL/B4vqe61rWmrXe9b7ruZ/7uf/3//88r4CcnBzz/+3ytxuK8mRvvPGGueeee0y1atVM9erVTYUKFUxWVpb54YcfTOXKlU3NmjXN+fPn8/6IG24w+/fvN1OmTDHHjh0zpUqVuuS1AgMDzcmTJ63X999/fxs96uu6b/H3jTfeaL755htz8OBBs3z5cjNixAgzcuRIs2DBArNw4UKzbt06c+jQIZOdnW3Kli1r7r77btOiRQsza9YsExQUZEqXLm0qVqxoOnbsWGTYBBYl0D///LPZuXOn2b17t0lPTzdHjx41wcHBpkGDBmbfvn3mxx9/tEB1N8CvVKmS6d+/v7n55pvN6dOnL3ktQCpfvnyQBvP59evXz/jtt9/+pbeL+SujixToX3755YqAjdzxCAgIiMzMzBz51VdfVeSaRd0fv5WOI0eO5PsZMgLYyAjNl4w4wZ46dar5/ffffZ6rWLFiZTW9oyU3scnJySEZGRm8B/DZfK7n6xvoX3/9tcDP/wzYAwcONPHx8XnOAYjS1SfF5CnffvutpbXMEHQVltuzpWTJktcv0IXR1sKAfeHCBXPbbbdZOkzQcwXBdrt27RoqubCCHa148eLWsWL1BQBnJvAZLL8ugT537lyhjrsU2ICLW3FKgJhaqly5coME4BgxuYQNst1CQkL4XgnFiLOff/65FQsefPBBoyB5/QH934INI7GEArukAP2DcyxdutRmqR38IhVc/8fj8ZTYs2dPnuAIw5s2bbpw0aJFrTUIjR5++OGVYr5l3WD5dQU0gAFSYcAGHMB+6KGHTGpqank5jR6ya38RuOE7duzIRu85j4DX2+V7yLHECsQq+G13Q2qmTZsGoC1XrVq1ODY29g4F5phGjRqFyF9P5zuXih/XFNAlSpS4yOrCgH3TTTeFKUEYpOcdSUlJE5j+YWFhNVeuXLntxIkT6HSgAGp34MCBOCUgeeTCOWjEh7Fjx5KsRLz++uvZZcqU+erRRx/drESpRWJiYl+dt7qkKP26AJosy87WLgW2XMHtoaGhY1avXv34J598sp1s7a677jLR0dGB27Zts9hOlimgJ0hzi8tlXHKG0M6cOUPmFyigzYoVK+r07NmzDt5e12hw9uzZpyRFadc80DCSdimwxayKmu4vz5s3L3z69OlM/Vp2Ki4driF93UoqLLnIlh5vEeObXwpodzt16pT1/PHHH5sqVar0GT16tBk2bJhHYEcoaKZd00DfeuutF1/nB7YYdX+pUqXGKXOMxAejr3Yjc+zSpcskBcnZAJuQkGD27t0bfscdd8zR9zp4sz+ftRJ88+23326k73k+1znMpEmTjAYttFu3bh5dM0Jvp12zQIs5uf72BbbYPERJRiSJBtPc2RT0OO4WUnkYvWXLFktCBExHwNYhPsHGmbz00kuW1Lz77rtZkpFgSZJlD53VSQpKR48eDY2KivKI1RE6b9o1CTRWyt28YAfKTdTV42+HDx9uT/3DLTkkKHXr1oWd6/744w8LoPvuu8/y09g8Tfl8webY5s2bYxE785A2V23dunWzd955x/qc89nt+++/J6EJ1eceuaQInTvtmgOaYOYrSKlj5QTUKwKts68Eom3btqcUSBNHjBgxUzbvBO4CjX3xxRetEqedHRYENt9p2LDhbL3coQFKF5BfS+8PZWRkdNmwYUMue7d161ZmSWinTp08ckoR8u9p1xTQNWrU8KWfVcXiEdLHyOPHj+f6rGrVqqZv374kGjP1+QAAlX6XoHrHAOFiGBhkxG4Fga3PiukcW+WfzU8//dRKgIcpm1xZv379cQRFat122759u5k/f37oc88959H5L7tmF2lZEQkAbJiNjChZqKW/J2vq/lW+OMh57J133mlGjRplXn755YWa7v9LIWn27NlM7bNYM8AmyDmDpQvsJDTZrk1zLFpN0Z+ybFxc3Flp/AYFyLh77703Fg3nnM62efNmI9cTqt+IZle7nLWRIgUaPQVsABDYAerw0I0bN7aCPQLH6aHN8OHDTymhGK+g2FUBcPMtt9xifW/t2rWGqU4QhNH5LbUBtgYnqVatWtZgUCuxtZ1Gaq/Pswmw0uK46tWrx2pQjRie6zzKJKkShgroKciV83f6LdCABNgENnnhZGnkX9WRYk57R01jwoQJZujQoR6BOU4sOgXwgIo9A2wCFkWhV199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" width="20" onclick="removeBlock();">
+												</div>
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #333333;" onclick="removeBlock();" onmouseover="this.style.color='#cccccc';" onmouseout="this.style.color='#333333';">
+													Cancel
+												</div>
+											</div>
+											
+											
+											<div style="float: left; width: 0px; height: 1px;"></div>
+											<div id="div_btn_tree_redraw" style="float: left;">
+												<div style="float: left; width: 20px; height: 1px;"></div>
+												<div style="float: left; width: 30px; cursor: pointer;">
+													<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAB4CAYAAABb59j9AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMDY3IDc5LjE1Nzc0NywgMjAxNS8wMy8zMC0yMzo0MDo0MiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTUgKFdpbmRvd3MpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjA4NTY4NkU2NDAxMDExRTg4MTI5Q0YzQ0ZENDE3Mjk5IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjA4NTY4NkU3NDAxMDExRTg4MTI5Q0YzQ0ZENDE3Mjk5Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MDg1Njg2RTQ0MDEwMTFFODgxMjlDRjNDRkQ0MTcyOTkiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6MDg1Njg2RTU0MDEwMTFFODgxMjlDRjNDRkQ0MTcyOTkiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6bURs7AAAQd0lEQVR42uyd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" width="20" onclick="toggleRedraw('tree');">
+												</div>
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #333333; cursor: pointer;" onclick="toggleRedraw('tree');" onmouseover="this.style.color='#cccccc';" onmouseout="this.style.color='#333333';">
+													Redraw Options
+												</div>
+											</div>
+											<div id="div_btn_view_target_paths" style="float: left; cursor: pointer; display: none;">
+												<input type="button" value="VIEW TARGET PATHS" onclick="viewTargetPaths();" style="width: 200px; border: solid 1px #333333; background: #eeeeee; cursor: pointer;">
+											</div>
+											
+											<div id="div_btn_cancel_target_paths" style="float: left; cursor: pointer;">
+												<div style="float: left; width: 20px; height: 1px;"></div>
+												<div style="float: left; width: 30px; margin-top: -3px;">
+													<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMDY3IDc5LjE1Nzc0NywgMjAxNS8wMy8zMC0yMzo0MDo0MiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTUgKFdpbmRvd3MpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjI1NTY4RTk0RDJGQzExRTc4QTA5Q0RFQTlGNDFGOTZEIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjI1NTY4RTk1RDJGQzExRTc4QTA5Q0RFQTlGNDFGOTZEIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MjU1NjhFOTJEMkZDMTFFNzhBMDlDREVBOUY0MUY5NkQiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6MjU1NjhFOTNEMkZDMTFFNzhBMDlDREVBOUY0MUY5NkQiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7fBxVTAAACB0lEQVR42uxY3U3DMBBOUd7bDWomwFL73mwAGxAmgA1IJ6CdAJiAdgLS90qkG4QN0gnKnXSurh92iKASefBJlpLY5/vu77uqg8PhkPRZLpKeSwQYAUaAEWAE2HMZTCaTv97xQOtGnit57yzb7bZ1Pz2DkwxuJs91H1M8U89V3wBaeD87QF+KM1o5LQOGF54UIsBGzrnvpbw3AfvZdDrVtvjciuryJdQkvHEbuGwvFzWB87w/9OjtxGmtN2IgUB5aNgQywxQXAO5TLncy9HSohf0EdFiuQG8kkZ2B83td1xTZAgGysY0cXEu0+NsS0o/GtZE70bkUB316BejNKVojXmL/RCcFuvDVownVj4duSkU3nMJ7T6fnkMoCwGeqfk8Auuaw4GGoSy2UQwln64BTuk4XQNol3pMqr547dH0IoA+MgUbxRb3sSjMLuKwQZTbyEQCYdZgwP/HjsbOpKVzNNxLJI1EbCHsu9dNAveyVIS7oMUwTA/N5DHSUePjQwJk3Wu8EttERrIHDHMAcaKdqIehEdBxJa8fWKpV85kmDIjArmOcnGXVE3UbQx45TaeUSeFQNMm4hdws1yoCuW+zsKMUWZ3EBHOQAzQPpsODtMuCQ8TQQR/c1AG6JtY2jzsiB8hc/nYwaaVUHfdcUVuxVFLlvM3sQ/5uJACPACDACjAAjwH+VLwEGABeGlq7p9BCbAAAAAElFTkSuQmCC" width="20" onclick="viewTreeLabels(1);">
+												</div>
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #333333;" onclick="viewTreeLabels(1);" onmouseover="this.style.color='#cccccc';" onmouseout="this.style.color='#333333';">
+													View Labels
+												</div>
+											</div>
+											
+											<div id="div_btn_view_target_paths" style="float: left; cursor: pointer; display: none;">
+												<input type="button" value="VIEW TARGET PATHS" onclick="viewTargetPaths();" style="width: 200px; border: solid 1px #333333; background: #eeeeee; cursor: pointer;">
+											</div>
+											<div id="div_btn_view_label" style="float: left; cursor: pointer; display: none;">
+												<input type="button" value="VIEW TREE LABELS" onclick="viewTreeLabels();" style="width: 200px; border: solid 1px #333333; background: #eeeeee; cursor: pointer;">
+											</div>
+											
+											<div style="float: left; width: 20px; height: 1px;"></div>
+											
+										</div>
+									</div>
+
+									<div style="clear: both; height: 0px; width: 100%; background: #cccccc;"></div>
+									
+									<div style="clear: both; height: 10px; width: 1px;"></div>
+								
+									<div style="float: left; width: 100%; height: 70px; border: solid 0px #ff0000;">
+										<div id="div_tree_filter" style="float: right; width: 500px; border: solid 0px #ff0000; display: none;">
+											<div style="float: left; font-size: 11px; font-weight: 700; width: 100px;">
+												Redraw Tree:&nbsp;&nbsp;
+											</div>
+											<div style="float: left;">
+												<div style="float: left;">
+													<div style="float: left; width: 60px;">
+														<div style="float: left;">
+															<input name="t_tree_filter_min" id="t_tree_filter_min" type="text" style="width: 50px; text-align: center;" value="0">
+														</div>
+														<div style="clear: both; height: 2px; width: 0px;"></div>
+														<div style="float: left; font-style: italic; text-align: center; font-size: 11px; width: 50px;">
+															Min
+														</div>
+													</div>
+													<div style="float: left; width: 60px;">
+														<div style="float: left;">
+															<input name="t_tree_filter_max" id="t_tree_filter_max" type="text" style="width: 50px; text-align: center;" value="100">
+														</div>
+														<div style="clear: both; height: 2px; width: 0px;"></div>
+														<div style="float: left; font-style: italic; text-align: center; font-size: 11px; width: 50px;">
+															Max
+														</div>
+													</div>
+													<div style="float: left; width: 5px; height: 1px;"></div>
+													<div style="float: left; font-size: 12px; font-weight: 500; font-style: italic; width: 80px; padding-top: 4px;">
+														<input id="r_amount_tree_percent" name="r_amount_tree" type="radio" style="width: 20px;" checked onclick="buildTreeFilter('percentage');">Percent
+													</div>
+													<div style="float: left; font-size: 12px; font-weight: 500; font-style: italic; width: 80px; padding-top: 4px;">
+														<input id="r_amount_tree_real" name="r_amount_tree" type="radio" style="width: 20px;" onclick="buildTreeFilter('real');">Real
+													</div>
+													<div style="float: left; font-size: 12px; font-weight: 500; font-style: italic; width: 100px;">
+														<input id="r_tree_slider_apply" name="r_tree_slider_apply" type="button" style="width: 100px; font-weight: 500; height: 18px; background: #eeeeee; border: solid 1px #333333; cursor: pointer;" value="APPLY" onclick="buildTree();">
+													</div>
+													<div style="float: left; width: 15px; height: 1px;"></div>
+												</div>
+											</div>
+										</div>
+									</div>
+									
+									<div id="div_tree" style="float: left; width: 1200px; border: solid 0px #ff0000;">
+										<div id="div_tree_container" style="float: left; width: 1200px; border: solid 0px #ff00ff;"></div>
+									</div>
+									<div style="clear: both; height: 20px;"></div>
+								
+									<script type="text/javascript">
+										var i_target_path_count = 0;
+										var i_stats_count = 0;
+										//$(function(){
+										//	$.contextMenu({
+										//		selector: '.context-menu-one', 
+										//		callback: function(key, options) {
+										//			var m = "clicked: " + key;
+                                        //
+										//			if (key == "startevent") {
+										//				$("#s_eoi_setting").val("EQUALS");
+										//				$("#s_event").val($(this).attr("nodename"));
+										//				$("#s_direction").val(key);
+										//				callRunTree();
+										//			} else if (key == "endevent") {
+										//				$("#s_eoi_setting").val("EQUALS");
+										//				$("#s_event").val($(this).attr("nodename"));
+										//				$("#s_direction").val(key);
+										//				callRunTree();
+										//			} else if (key == "text") {
+										//				setTextRecordNode($(this).attr("edgemap"));
+										//				getTextRecords('PATHSTART');
+										//			} else if (key == "starttarget") {
+										//				highlightPath($(this).attr("edgemap"), $(this).attr("edgeidmap"));
+										//			} else if (key == "target" || key == "stats" || key == "addtostats") {
+										//				$("#div_btn_view_text").css("display", "");
+										//				addToTargetPaths($(this).attr("edgemap"), $(this).attr("edgeidmap"));
+										//				colorEdgePath($(this).attr("edgeidmap"), "#00796B");
+										//				
+										//				if (a_target_paths.length > 1) {
+										//					$("#div_btn_view_text").css("display", "none");
+										//				}
+										//				
+										//			} else if (key == "removefromstats") {
+										//				deColorEdgePath($(this).attr("edgeidmap"));
+										//			}
+										//		},
+										//		build: function ($trigger, e) {                  
+										//			return {
+										//				items: loadItems()
+										//			};
+										//		} 
+										//	});
+										//	
+										//	$('.context-menu-one').on('click', function(e){
+										//		console.log('clicked', this);
+										//	})
+										//});
+										//
+										//loadItems = function() {
+										//	if (s_direction_set == "endevent") {
+										//		return {
+										//			"startevent": {name: "From This Event&nbsp;&nbsp;", icon: "event"},
+										//			"endevent": {name: "To This Event&nbsp;&nbsp;", icon: "event"},
+										//			"starttarget": {name: "Highlight Start&nbsp;&nbsp;", icon: "lines"},
+										//			"target": {name: "Highlight Entire Path&nbsp;&nbsp;", icon: "target"}
+										//		}
+										//	} else if (s_direction_set == "startevent") {
+										//		return {
+										//			"startevent": {name: "From This Event&nbsp;&nbsp;", icon: "event"},
+										//			"endevent": {name: "To This Event&nbsp;&nbsp;", icon: "event"},
+										//			"target": {name: "Highlight Entire Path&nbsp;&nbsp;", icon: "target"}
+										//		}
+										//	} else {
+										//		return {
+										//			"startevent": {name: "From This Event&nbsp;&nbsp;", icon: "event"},
+										//			"endevent": {name: "To This Event&nbsp;&nbsp;", icon: "event"},
+										//			"text": {name: "Text Records&nbsp;&nbsp;", icon: "text"},
+										//			"target": {name: "Highlight Entire Path&nbsp;&nbsp;", icon: "target"}
+										//		}
+										//	}
+										//}
+										//
+										//$(function(){
+										//	$.contextMenu({
+										//		selector: '.context-menu-compare', 
+										//		callback: function(key, options) {
+										//			var m = "clicked: " + key;
+                                        //
+										//			if (key == "startevent") {
+										//				$("#s_eoi_setting").val("EQUALS");
+										//				$("#s_event").val($(this).attr("nodename"));
+										//				$("#s_event_compare").val($(this).attr("nodename"));
+										//				$("#s_direction").val(key);
+										//				callRunTree();
+										//			} else if (key == "endevent") {
+										//				$("#s_eoi_setting").val("EQUALS");
+										//				$("#s_event").val($(this).attr("nodename"));
+										//				$("#s_event_compare").val($(this).attr("nodename"));
+										//				$("#s_direction").val(key);
+										//				callRunTree();
+										//			}
+										//		},
+										//		build: function ($trigger, e) {                  
+										//			return {
+										//				items: loadItemsCompare()
+										//			};
+										//		} 
+										//	});
+										//	
+										//	$('.context-menu-compare').on('click', function(e){
+										//		console.log('clicked', this);
+										//	})
+										//});
+										//
+										//loadItemsCompare = function() {
+										//	return {
+										//		"startevent": {name: "From This Event&nbsp;&nbsp;", icon: "event"},
+										//		"endevent": {name: "To This Event&nbsp;&nbsp;", icon: "event"}
+										//	}
+										//}
+										//
+										//$(function(){
+										//	$.contextMenu({
+										//		selector: '.context-menu-two', 
+										//		callback: function(key, options) {
+										//			var m = "clicked: " + key;
+										//			window.console && console.log(m) || alert(m); 
+										//		},
+										//		items: {
+										//			"createlist": {name: "Create List&nbsp;&nbsp;", icon: "point"}
+										//		}
+										//	});
+										//	
+										//	$('.context-menu-two').on('click', function(e){
+										//		console.log('clicked', this);
+										//	})
+										//});
+						
+									</script>
+									
+								</div>
+								
+								<div style="clear: both; height: 20px; width: 1px;"></div>
+								
+							</div>
+							
+							<div style="clear: both; height: 0px; width: 1px;"></div>
+
+						</div>
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						<!-- START SANKEY -->
+						<div style="clear: both; height: 0px; width: 1px;"></div>
+						 
+						 <div id="div_flow" style="float: left; background: #00233C; display: none; overflow: hidden;">
+
+							<div style="float: left; border: solid 0px #ff00ff; width: 100%;">
+								<!-- <div style="clear: both; height: 20px; width: 1px;"></div> -->
+								
+								<div style="float: left; width: 20px; height: 1px;"></div>
+								<div id="div_flow_content" style="float: left; width: 1220px; overflow: hidden; border: solid 0px #cccccc;">
+								
+									<div id="div_sankey_controls" style="float: right; padding-top: 12px; border: solid 0px #ff0000;">
+										<div style="float: left; height: 20px;">
+											<div id="div_btn_sankey_colors" style="float: left; height: 30px; border: solid 0px #333333;" onmouseover="this.style.cursor='pointer'; sankeyColorsPullDown('ON');" onmouseout="this.style.cursor='default'; sankeyColorsPullDown('OFF');">
+											<!-- <div id="div_btn_sankey_colors" style="float: left; height: 30px; border: solid 0px #333333;" onclick="callRunTree();"> -->
+												<div style="float: left; width: 20px; height: 1px;"></div>
+												<div style="float: left; width: 30px; cursor: pointer; margin-top: -4px;">
+													<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAB2CAYAAABh7bmNAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMDY3IDc5LjE1Nzc0NywgMjAxNS8wMy8zMC0yMzo0MDo0MiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTUgKFdpbmRvd3MpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOkFEODFDQUIxNDgyMDExRThCQTRFOUVBQTg5MTkyNDcxIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOkFEODFDQUIyNDgyMDExRThCQTRFOUVBQTg5MTkyNDcxIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6QUQ4MUNBQUY0ODIwMTFFOEJBNEU5RUFBODkxOTI0NzEiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6QUQ4MUNBQjA0ODIwMTFFOEJBNEU5RUFBODkxOTI0NzEiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7YUvwKAAATFUlEQVR42uxd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" width="20">
+												</div>
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #e6e6e6; cursor: pointer;" onmouseover="this.style.color='#ffffff';" onmouseout="this.style.color='#e6e6e6';">
+													Colors
+												</div>
+											</div>
+											<!--
+											<div style="float: left; width: 0px; height: 1px;"></div>
+											<div id="div_btn_sankey_redraw" style="float: left;">
+												<div style="float: left; width: 20px; height: 1px;"></div>
+												<div style="float: left; width: 30px; cursor: pointer;">
+													<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAB4CAYAAABb59j9AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMDY3IDc5LjE1Nzc0NywgMjAxNS8wMy8zMC0yMzo0MDo0MiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTUgKFdpbmRvd3MpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjA4NTY4NkU2NDAxMDExRTg4MTI5Q0YzQ0ZENDE3Mjk5IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjA4NTY4NkU3NDAxMDExRTg4MTI5Q0YzQ0ZENDE3Mjk5Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MDg1Njg2RTQ0MDEwMTFFODgxMjlDRjNDRkQ0MTcyOTkiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6MDg1Njg2RTU0MDEwMTFFODgxMjlDRjNDRkQ0MTcyOTkiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6bURs7AAAQd0lEQVR42uydCbhVVRXH10NDBJRUNCERFDUxREQsJwRFQjNJRQVHcC5NxRETcc4xTFTMoRQKnCjCPsdUFNNU1HAIQ7NEBgEDA4H3GMTX/n9nbc95993hDPucvc+9a33f+q7y7tln2L+7ztprr712XWNjI4m4J3V1dbV2y52UnqP0KKWbKX1L6Z1KH1MaGtI6AVqAdkB2VvqA0r0K/n2N0lFKbw0LtQAtQLsA8ySlvUr8/Uulo5XeKEAL0K7LLgxzzwrfW8tQ3yxAC9CuSjelv1PaO+T317H7cYsALUC7JjspHa9074jHrWWox5TyqQVoATpr6ap0gtJ9Yx6PgeLPlf5KgBagXYB5IjWPZkSV1UpHKr1dgBagbUl38kJzvQ2118CWemzwH1sIOiIZSSul2xhsb2OlNykdIRZaLLQNgfHsw4PBLgbbhftxCXmzio0CtACdtfQjL1zXyWCb9UpPV/qQAC1A24IalrqzwTY/VjpQfGgR0wI/+fAK47MXlQ5TOsfgebfDgFOAFjEpyJK7jbw4888qfHe60tOUzjV4/k0EaBFTsil5IbTB/N/Iuzi7wjHPs++7wNA1zCH40KLuac6kDXkx5sYCrQ8BNaQ/Q92YQP+kdHOBR4BO/JovAbPWVUrPDNHOAKWfxoR5FnnJTiTwCNBJYf5NCOBWKD0jRHuHKF0YEWZY9j5ftyDwCNAJ3Ix7IoC3MiTUByudH7LNJUqPaHK0wCNAxxBMO98RwzWoDwn1wBDuB1JJT212pMAjQEeUjTiaEXfwtqIoiM3lUKWLS7SBZVmXFj1K4BGgI1rm2xJGI6DLlZ4c4nw/VvpZkeOxamVDAVqATiItyV993WgI6mEhzjuoYKA4nv13EqAF6LjyDfJSNb8yCDT0iwhQ/0/pk0q/We6LkpzkqDiUnIRX+7XkpWimMbMMn/pctrzlZD+OaswWoAXoJDBfRd7C1DQFlhq5H79P/NwEaAG6hGyg9Eqll+NyMjjfMp4mf1CAFqBNS4sAzFkmsMFPPkvpIxShnp0ALUBXgvkypVeTnTWn8KlPJK9IY6yLFxH5+nfEg78rLLKBgd/n4nKIhTYB80VKb2D/2YZ8RN6Ey8sCtACdFOYLyEvKt2WZP1E6nLzlWTIoFKATyQVsmVtaut25DPMLiZ9bKaAtDUq2Vbqn0l2V7kBe/YYtlLZlxSwRElMwbbpU6X+UfsD6qtJ3yZvNEgkvmNTALGArS+fHam2sLZxmpDXLU6+Ykz+avBUP86hyPi0GC19Q+fzYydxmK2G1omAyo57MTmdHUVjmHxi9IwtAw/RjDRkKXa8quMF/Kf0tWw3c6I7krSQu9rqA5UadtOOVXs+vq4ZAWwjU301eUW2R5oJlUWsswox850ON31WGQCPB5RTy1n8FE75hUYexu5FUWpO36ngqeQngjeyC/FHAbgbzKoswL0oF5oyAhnU9lv1dfUNvsd/UNsVOgwW/gn1tvcLh5pTPmQfBipEVFmFG0v5hqd1dykDvzoM1fTMvkbcQMksBwKMCnQi/7aAahXm4ZZiRrH9kqneYEtDI0voFeftioLH3HYCoA7se2g3B9W1QQzCfWGFAnX+YUwK6E1tiHZnA2q+WDnXsCQEr9ecacUFOcMAyD87kTg0DPYBDZ2hgJkcpXJRuHFHBdb5OqLhTvXKsZcuMOYOhmd2tQaCPC4SBEC5zPQ7cnmHWg9R2VQjz0YFBsQ1dRuGWWDkH9Aj2S9dyaC4vgso/f+WHP90x1yipwF/9r0WYP2e/nfIG9Ejya5gdksOOh2V+l+/hgSqB+QjLlhmJ+idZufOEQP80AHO/HAOAIt26Us8pOYd5kGWYwxaScQ5oWOMv2W8eWAVW7QC+n1WkK1nmTzD7tsgizJj5/YnVJxAT6K78Wmm09mpJR64M+NN52+QEBmaBRZhXWYc5JtCobfZ3vokxVRYVQL7JrBz+UA+yDDMs87lOPIkYQN/IN/EaA1Bt0pcjNnh1t8nB9fan+IXCTehqjnLV5RHoPdjPhOO/vYXLRWx7K/J2PNosxfNM5c66KAcwz7MIM8ZP5znlnkUAGmvN3uAbuSSjy9uWHximqOdQ89pq8NteUXoNmU0P7U1+zq6rsWkMYudahBlzDhc691QiAH0y+ftZpO1qHKj0L0rXFzzE+ey/v6n0PWq+2gKDuX0NXcMz3OaRDsK8PzVNx81akXR2mZMD55BAt2QL2ciwpSWInjxJTffPGMODnjYl3ho9lY4OXB+s+L3kJfsnkcO5vamOddk+Sv9tGWZUVHIzUzEk0KfzzTyd4qUcR35GGOozIENswwjH40d3PvnJUW+TlzKaJOKxlF+tWzgEs03LjGcxilwuUBQCaFz8B3xDfVK6jCu4fbgYyFPeOEFbmPV7i/w1ilsmaEtvVzbUga7ai/wMQRv6FfeT2znkIYA+IBCmS0OuJn/K1FQuCH4Qj3O7ryQY2A0hP3vQpvSmpmsxbcB8Y8Q3prNAj+ebOjOF059E/kKAvQ233ZoHj2j/2phtbM3Hf2ixi3qRnzxlQxGmvYnykolYAWgMxJAcjuC56bjvThx2wwOLWpuhRchBH4rVNPD1d415nQvYFdrYQvf0dMAy30B5mkCrAPRQvrFHUzj189z2dSG/j4pK93M0Q69VXMR+bo8yx13L370n5nVO4+N7ZNw1qB71jkWYdWrDRpQnqQD0BL6xEwyf9ofc7gchHlhbvo6vAlYDuyLNC4C9ni1Jsbjo5mylV1C89YO/5nMck3HXvG4ZZmzflr/qUxWA1gkv3zZ82unc7pAK32sXiFhg1u4sarr+D/99Aflr5m4u0c6j/PcjEkRgzsu4a2xWNRqbO8scAujt+OZmGz7ljtzuxxXimbC2epJlOpVfyNqdvPVr+G6/In8/NWB1osr5fOxVGXfNMkswj6Pkk1LWpBxQe/Dny4bPeRR/TqLylUKHcBgPEQaswihX1f0f5KcvXlbk7zP5c+cY17uCPzei6pf7yCs7UV+NQPfkT9MW+gD+fCqEZYQgNXF5iHbxA1nCFrptkUiFDsNFfonx57oagPnCwA+46oDumhLQu3Oo7o0y39mSoxoY/D0Tsl0MDN/mEFPngr+t5s844ac2BZa6GuVeNhy5v8dyQHdJAWjEsttz6G1tme99l33oGRStgPkz3PaSgn/X2+k2xLjmrQI+bTXKBLbM9dVwMy1CdOSnBs+nwfospFWMCtEveTC7uODfda50nBm/7/Dn3CqEeRJHiVZWyw2Vm5vX8VuTv1w92/Zlhe8tTeDzFhNdKPLVGMfqFeD/rEKYzyFvsXP1SJmw3doUXrOdeJA1I4RrAp94PiVPIsePaBG31znisVvwcQssdE2aYbuHKN0lbE4CraeWTUob8tM6K8kM/m7fhOe8mNuJszPpYD52YhUBPZmquThlGaDXpDQQWsjWv1LE4TTugGkJrDTyL5AAhZBb9xjHT+RrGF4lQE8mdxYrZA70spTCOC/ww+1d4XstOcLSyCGlqIIojV4RPTrG8Zvwj2FNYDCbZ6CnBgb6NQn0fH4QpvNgr6fwK8e/z0Ct5wFMWOlPfkmsByneKotzAv4m5RxoLHboQLUgZYDW1ZFMP4i+3G7YKfWjyE/UQTmD3cp8F1b/YfIz8+6jeKss8CPWJQL2yjnQyIfpSLUiZYB+ih/IHoZPidj3Jwxd2KT7/ajpSmeE0LCfIepx3MpW9KPA39H+sQmuUVvn5yx2jYmq+0+QudBn7oG+i9LLA76G2749otUcUQBuob7H30myugQAIA6OWHkvi12zmPzqREsjKJK46vlt1pFqTcoAfRE/0FEpnHYrHnDhwcfZcBOzd9hu4QyOhhxssPMe4/u+w3LX6MUVJ1fqK9EAt2WAPpgf6MMpddhN3P4Uh37fOvcZb4FNLV4HUlWXF0ZYBNhkQOsVz7NT6rS2gbDacQ7APIjdjNWWXQ1iN08PgkmANgM05GN+sFum1HEDeXCIePeuFgE6iF0gXMvxDvy4nqUidfUE2ORAT6T0CxbqASKsdScL8GCdYQNfgwvVNHcgfyHwhgK0WaCHBeK5aUld4Iczh+Itk4obPhzNbgYAuoTckNupRHEcATY50FtzZy+gdAv0ISQ3mTsSoadDU4amC3nlenWN6eMdgbk9R37qqcg0tQCbHGjIq9zx/VPuTExPjyW/9sY4Mp9DgWy/y8mvK40Jmu7kjui0gHuihFhFowE9gh/yhIw6FfFlvcPWYo6HJ91gvgODvCQwWQF4XFquD4u8kq+tiwCdHtBwO9ZxJCKrTXQ6sF+tczKWsR8/IAKEqJ2HApNPsJ+sKyw9lKGfHkV0haZxUSfBRH2tK7VBUF1dkxTkKRwNwKzV+Aw7GfnMl3KURdfFQC41prhRRmw+W7U6/rHByiE/pBv7o1qw5/UjPPv3oYMwf49du5U8C7qoFNAiFSRkBf+BbD3eITv7amCFBbZhnhpwRyqVgAX0yEf5EbldPRNjB132d2ScvhKNbqHxP2+zxUQE4kmLAOBaOrNL0T7gX69k/YStcENObMrZSu/kN85u7EOTWOh0LTREl9adQfnbNthV6chvHIwV+sTtK9Fog8LgRMS75O5WZ3kTGIXn+HnelcT4iMYDGqLrOmMnplbCZCK5OBALby1A2wEaojekvEaYjC37cygU/nLoFUECbDpA78gDLoTPdhU2I8s25C/gjbQRkwCbDtDEsWF8aSbVRt1kU9IuMA6539QAXjQ50Iid/o3iV8WvRUEClt4o6XmKUR5CgE0PaEgX8qakEXI6RnitaAD+QP5GSe1MhlhFzQANGcRAIwWzl3BbEuZJ5O8rs43pOQNRc0BD9NbG85J0VhW7GVMCz6drksYE2GyADq44QVXRbwnHXw8Anw1Y5u2SNijAZgO0tkRPcOdhR6qtaxzmbQPRjPdNvbkE2OyAJp7t0hZpNsUrIFMNgl2+PuPngEqrxgqLC7DZAg1BCa7HuTORq9yzhkBGrstI8rdrvo8MV24VYLMHWrsfuowVVrkMrZHZP51ohEI1p6VxEgHWDtB6oIg1fOsp73tHV77P08lfdDArzbeSAGsPaC1YA7iQ/NUuPaoIZmwg+hL5axXHUrKqpwJ0DoAmjnhM445HQtN1aXd8yoIFvHcH3j6wyvtkcWIB1g2g9WwZ8n91PQxdkDxPK1+wAPeWwD3AzbiQzG/ZIUDnAGgt25O/MwAU214c5jjYWIWNwi+6/l0Duxfts74QAdY9oLWg9vTMANizODLgiiuC60B5sBfJrw2CfJVxZHF6X4B1F2gdIcDGlm8GwF7G0OxP6dbSKyZYPY7aIw9yuFFfE3IwRtuwyAJ0emUMsphdO5W8xbfaSi/imccXeVA5x/A5UZhmT6X7Kj2QvI2JtD+8ml0jbEz0NA8AyQWgRSpYSUeA1tKOreRw8pb1B600EnxQGwT5xKi7MZshxyY5pWpZbMqWtRP7wjvxJ0qBdaGm9ZeX8+QIitmgcv4XrnWWAJ0/oIOCLXz7svWGBd2lzHdRYGZdkR9HObcF5cFeJ2+/xFeUvkZexSVnRYDON9CFAkuLWThMziCvGNWTOjL4m7AL0ZIHccvZTdBbnS1maz6HLTvKhC3MW2cJ0AmAFhERoEVEBGgREXPyfwEGAKNmj90aaxf3AAAAAElFTkSuQmCC" width="20" onclick="toggleRedraw('sankey');">
+												</div>
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #333333; cursor: pointer;" onclick="toggleRedraw('sankey');" onmouseover="this.style.color='#cccccc';" onmouseout="this.style.color='#333333';">
+													Redraw Options
+												</div>
+											</div>
+											-->
+											<div style="float: left; width: 10px; height: 1px;"></div>
+											<div id="div_btn_sankey_labels" style="float: left; cursor: pointer;">
+												<div style="float: left; width: 20px; height: 1px;"></div>
+												<!--<div style="float: left; width: 30px; margin-top: -3px;">
+													<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMDY3IDc5LjE1Nzc0NywgMjAxNS8wMy8zMC0yMzo0MDo0MiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6OUY2QjgwNDE0RjJCMTFFOTgyNEM4ODhFMTBCMjU4MEMiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6OUY2QjgwNDA0RjJCMTFFOTgyNEM4ODhFMTBCMjU4MEMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTUgKFdpbmRvd3MpIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MjU1NjhFOTREMkZDMTFFNzhBMDlDREVBOUY0MUY5NkQiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6MjU1NjhFOTVEMkZDMTFFNzhBMDlDREVBOUY0MUY5NkQiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7OoLD9AAACC0lEQVR42uyY3VHCQBDHg8M7+MgTZwWeFZAOxAqMFWgHhgqECsQKhAoMHYQO8AVeQwW4O7PHLH/vYkaZMQ93MzuTkN3b395+nGPncDgkbV4XSctXBIyAETACRsCWr+5ut/vrHk8kY3ku5b3xGgwG9YBnCJLhRvK8aWOKR+q5bBughfezA/pSnJJkJAYcTz0pRMBK9NzvhbxXAf8p9YD2xXoLqsu5U+hst1ttwB/uA5vtZaMqoM/fex67tQSt7foMAuWh14ogU0xxDnCfsrlbPU+HWviegA2va7Dry8mOIPi9rms62RwB2dlKFJdyWvzbDNKPzrWTB7G5kgB9djnYTei0+izi/8SmC+PCV48mVD+ecVOoccMpfPR0egapzAE+VfV7Auiaw0KEoS61UA4F6G4CQek6ncLQLnCfrorqtUHXhwB9MAYaxXfqRdM5OIXN7kguSW5qANMGN8xP8/HY2dQUhmRMkiKggWPPpH4qqJe9csQFPYTbxMD9PIRxlHjmoQGdd5IPgqx0ijcwwxxgBmOnrBnQidi4Ia0DW6pUss6LhiKYBdznJxl1g7puQB87TqWVu+1ZNciwZrhbqFEGuq3xs6ZmsViDOcwgBzQJpMNCtLNAQMbTQHy6bwG4GdY2XnVGFIpf/Olk1JVWNrB3F4EVfyWd3Lc7uxP/NxMBI2AEjIARMAL+6/oSYAD7BZbMf/BUjAAAAABJRU5ErkJggg==" width="20" onclick="toggleSankeyLabels();">
+												</div> -->
+												<div style="float: left; font-size: 11px; font-weight: 700; color: #e6e6e6;" onclick="toggleSankeyLabels();" onmouseover="this.style.color='#ffffff';" onmouseout="this.style.color='#e6e6e6';">
+													View Labels
+												</div>
+											</div>
+											
+											<div style="float: left; width: 60px; height: 1px;"></div>
+											
+										</div>
+									</div>
+									
+									<div style="clear: both; height: 0px; width: 100%; background: #cccccc;"></div>
+									
+									<div style="clear: both; height: 10px;"></div>
+								
+									<div style="float: left; width: 56px; height: 1px;"></div>
+									<div id="div_flow_slider" style="float: left; border: solid 0px #ff0000;">
+										<div style="float: left; font-size: 11px; font-weight: 700; color: #e6e6e6;">
+											Filter (Count):&nbsp;&nbsp;
+											<input type="text" id="amount" readonly style="border: solid 0px #cccccc; background: #00233C; font-size: 11px; font-weight: 700; color:#e6e6e6;">
+										</div>
+										<div style="clear: both; height: 10px;"></div>
+										<div id="slider-range-flow" style="float: left; width: 100%;"></div>
+									</div>
+									
+									<div style="float: right; width: 450px; height: 70px; border: solid 0px #ff0000;">
+										<div id="div_flow_filter" style="float: left; width: 450px; border: solid 0px #ff0000; display: none;">
+											<div style="float: left; font-size: 11px; font-weight: 700; width: 110px;">
+												Redraw Sankey:&nbsp;&nbsp;
+											</div>
+											<div style="float: left;">
+												<div style="float: left;">
+													<div style="float: left; width: 60px;">
+														<div style="float: left;">
+															<input name="t_flow_filter_min" id="t_flow_filter_min" type="text" style="width: 50px; text-align: center;" value="0">
+														</div>
+														<div style="clear: both; height: 2px; width: 0px;"></div>
+														<div style="float: left; font-style: italic; text-align: center; font-size: 11px; width: 50px;">
+															Min
+														</div>
+													</div>
+													<!--
+													<div style="float: left; width: 60px;">
+														<div style="float: left;">
+															<input name="t_flow_filter_max" id="t_flow_filter_max" type="text" style="width: 50px; text-align: center;" value="100">
+														</div>
+														<div style="clear: both; height: 2px; width: 0px;"></div>
+														<div style="float: left; font-style: italic; text-align: center; font-size: 11px; width: 50px;">
+															Max
+														</div>
+													</div>
+													-->
+													<div style="float: left; width: 5px; height: 1px;"></div>
+													<div style="float: left; font-size: 12px; font-weight: 500; font-style: italic; width: 80px; padding-top: 4px;">
+														<input id="r_amount_flow_percent" name="r_amount_flow" type="radio" style="width: 20px;" checked onclick="buildFlowFilter('percentage');">Percent
+													</div>
+													<div style="float: left; font-size: 12px; font-weight: 500; font-style: italic; width: 80px; padding-top: 4px;">
+														<input id="r_amount_flow_real" name="r_amount_flow" type="radio" style="width: 20px;" onclick="buildFlowFilter('real');">Real
+													</div>
+													<div style="float: left; font-size: 12px; font-weight: 500; font-style: italic; width: 100px;">
+														<input id="r_flow_slider_apply" name="r_flow_slider_apply" type="button" style="width: 100px; font-weight: 500; height: 18px; background: #eeeeee; border: solid 1px #333333; cursor: pointer;" value="APPLY" onclick="buildFlow();">
+													</div>
+													<div style="float: left; width: 15px; height: 1px;"></div>
+												</div>
+											</div>
+										</div>
+									</div>
+									
+									
+									<div id="div_flow_container" style="float: left; border: solid 0px #33ee00;">
+										<div id="div_flow_chart" style="float: left; border: solid 0px #ff0000;"></div>
+									</div>
+									
+									
+									<!-- <div style="clear: both; height: 40px; width: 1px;"></div> -->
+							
+									<style>
+
+										#div_flow_chart {
+										  height: 100%;
+										}
+
+										#div_flow_container .node rect {
+										  cursor: move;
+										  fill-opacity: .9;
+										  shape-rendering: crispEdges;
+										}
+
+										#div_flow_container .node text {
+										  font-size: 10px;
+										  /*color: white;*/
+										  pointer-events: none;
+										  stroke: #ffffff;
+										  stroke-width:0.5;
+										  fill : #ffffff;
+										  /*text-shadow: 0 1px 0 #e6e6e6;*/ 
+										}
+
+										#div_flow_container .link {
+										  fill: none;
+										  /* stroke: #cccccc; */
+										  stroke: #e6e6e6;
+										  cursor: pointer;
+										  stroke-opacity: .7;
+										}
+
+										#div_flow_container .link:hover {
+										  stroke-opacity: 1.0;
+										}
+										
+										#div_flow_container .labelText {
+										  z-index:10;
+										  /* fill: #333333; */
+										  fill: #cccccc;
+										  font-size: 11px;
+										  /* stroke: #333333; */
+										  /*stroke: #cccccc;
+										  stroke-width:0.5;*/
+										  cursor: pointer;
+										  /* stroke-opacity: .7; */
+										}
+
+									</style>
+									
+									<script src="js/tsankey_drawsankey.o.js"></script>
+										
+										
+										
+										
+										
+										
+										
+								</div>
+								
+								<!-- <div style="clear: both; height: 20px; width: 1px;"></div> -->
+								
+							</div>
+							
+							
+								
+						</div>
+						
+						
+						<!-- END SANKEY -->
+						
+						
+						
+
+						
+						
+						<!-- <div style="clear: both; height: 20px; width: 1px;"></div> -->
+						
+					</div>
+					
+					
+		
+		<!-- FOOTER -->
+	
+				<div style="clear: both; width: 1px; height: 0px;"></div>
+			
+			</div>
+		</div>
+	</div>
+</body>
+</html>
